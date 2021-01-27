@@ -3,11 +3,13 @@ import os
 import pytest
 import ssl
 import fsspec
+import irods_fsspec
 from fsspec.registry import get_filesystem_class
 from irods.session import iRODSSession
 from . import IRODSFileSystem
 import logging
 
+irods_fsspec.register()
 log = logging.getLogger(__name__)
 
 _CAN_CONNECT = None

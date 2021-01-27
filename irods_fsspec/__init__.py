@@ -120,4 +120,5 @@ class IRODSFileSystem(AbstractFileSystem):
             data_obj = self.session.data_objects.get(path)
         return data_obj.open(mode=mode)
 
-register_implementation('irods', IRODSFileSystem)
+def register():
+    register_implementation('irods', IRODSFileSystem)
