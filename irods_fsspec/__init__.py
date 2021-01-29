@@ -88,7 +88,7 @@ class IRODSFileSystem(AbstractFileSystem):
 
     def _mv_data_object(self, path1, path2):
         self.session.data_objects.move(path1, path2)
-    
+
     def _mv_collection(self, path1, path2):
         self.session.collections.move(path1, path2)
 
@@ -119,6 +119,93 @@ class IRODSFileSystem(AbstractFileSystem):
         else:
             data_obj = self.session.data_objects.get(path)
         return data_obj.open(mode=mode)
+
+    def _data_object_info(self, data_object):
+        '''Given iRODSDataObject instance return dict with keys
+        giving path, size, and type info
+
+        Parameters
+        ----------
+        data_object : iRODSDataObject
+            Instance about which to collect info
+
+        Returns
+        -------
+        result : dict
+            File metadata used by fsspec
+        '''
+        return {
+            'name': data_object.path,
+            'size': data_object.size,
+            'type': 'file',
+            'checksum': data_object.checksum
+        }
+
+    def _collection_info(self, collection):
+        '''Given iRODSDataObject instance return dict with keys
+        giving path, size, and type info
+
+        Parameters
+        ----------
+        collection : iRODSCollection
+            Instance about which to collect info
+
+        Returns
+        -------
+        result : dict
+            Directory metadata used by fsspec
+        '''
+        return {
+            'name': collection.path,
+            'size': 0,
+            'type': 'directory'
+        }
+
+    def ls(self, path, detail=True):
+        '''List data objects and subcollections at path.
+
+        When `detail=True`, `entries` is a list of dicts containing
+        (at least) the keys {'name', 'size', 'type'} where size is
+        in bytes, and type is either 'file' (data object) or
+        'directory' (collection)
+
+        Parameters
+        ----------
+        path : str
+            iRODS path
+        detail : bool (default: True)
+            Whether to return size and type information as a
+            dict or just a list of names
+
+        Returns
+        -------
+        entries : list
+            Either a list of dicts (`detail=True`) or of str paths
+            (`detail=False`) with information on the data objects and
+            subcollections of `path`
+        '''
+        # info dict keys:
+        #   name (path)
+        #   size (bytes)
+        #   type ('file', 'directory')
+        #   ... ?
+        entries = []
+        path = self._strip_protocol(path)
+        if self.session.data_objects.exists(path):
+            data_object = self.session.data_objects.get(path)
+            entries.append(self._data_object_info(data_object))
+        elif self.session.collections.exists(path):
+            collection = self.session.collections.get(path)
+            # unify data_objects and subcollections
+            for subcoll in collection.subcollections:
+                entries.append(self._collection_info(subcoll))
+            for data_object in collection.data_objects:
+                entries.append(self._data_object_info(data_object))
+        if detail:
+            return entries
+        else:
+            return [x['name'] for x in entries]
+
 
 def register():
     register_implementation('irods', IRODSFileSystem)

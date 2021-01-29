@@ -49,7 +49,7 @@ def test_write_then_read_implicit_auth():
     f2 = fsspec.open(the_path, "rb")
     with f2 as fh:
         assert fh.read() == b'test\n'
-    
+
     # clean up
     f2.fs.rm(the_path)
 
@@ -90,7 +90,7 @@ def test_mv():
     irodsfs.mv(the_path, new_path)
     with irodsfs.open(new_path, 'rb') as fh:
         assert fh.read() == b'test\n'
-    
+
     # clean up
     irodsfs.rm(new_path)
 
@@ -111,4 +111,44 @@ def test_mkdir():
 
     # clean up
     irodsfs.rm(test_file_path)
+    irodsfs.rm(dir_path)
+
+@pytest.mark.skipif(
+    not _check_connection(),
+    reason="Initialize iRODS connection with 'iinit' and/or set $IRODS_ENVIRONMENT_FILE"
+)
+def test_ls():
+    irodsfs = fsspec.filesystem('irods')
+    dir_path = f"/iplant/home/{_ENV['irods_user_name']}/delete_me_test_irods_fsspec_dir/"
+    test_file_path = dir_path + "test.txt"
+    subcoll_path = dir_path + "subcollection"
+
+    # clean up errored runs
+    if irodsfs.exists(test_file_path):
+        irodsfs.rm(test_file_path)
+    if irodsfs.exists(subcoll_path):
+        irodsfs.rm(subcoll_path)
+    if irodsfs.exists(dir_path):
+        irodsfs.rm(dir_path)
+
+    # test
+    irodsfs.mkdir(dir_path)
+    f1 = irodsfs.open(test_file_path, "wb")
+    with f1 as fh:
+        fh.write(b'test\n')
+
+    result = irodsfs.ls(dir_path)
+    assert result == [{'name': test_file_path, 'type': 'file', 'size': 5, 'checksum': 'd8e8fca2dc0f896fd7cb4cb0031ba249'}]
+
+    irodsfs.mkdir(subcoll_path)
+    result = irodsfs.ls(dir_path)
+    result.sort(key=lambda x: x['name'])
+    assert result == [
+        {'name': subcoll_path, 'type': 'directory', 'size': 0},
+        {'name': test_file_path, 'type': 'file', 'size': 5, 'checksum': 'd8e8fca2dc0f896fd7cb4cb0031ba249'},
+    ]
+
+    # clean up
+    irodsfs.rm(test_file_path)
+    irodsfs.rm(subcoll_path)
     irodsfs.rm(dir_path)
