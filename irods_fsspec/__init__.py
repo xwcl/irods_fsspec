@@ -203,13 +203,10 @@ class IRODSFileSystem(AbstractFileSystem):
         #   ... ?
         entries = []
         path = self._strip_protocol(path)
-        print('path', path)
         if self.session.data_objects.exists(path):
-            print('Got data object')
             data_object = self.session.data_objects.get(path)
             entries.append(self._data_object_info(data_object))
         elif self.session.collections.exists(path):
-            print('Got collection')
             collection = self.session.collections.get(path)
             # unify data_objects and subcollections
             for subcoll in collection.subcollections:
