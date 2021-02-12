@@ -68,6 +68,7 @@ def test_write_then_read_explicit_auth():
     f1 = fsspec.open(the_path, "wb")
     with f1 as fh:
         fh.write(b'test\n')
+
     f2 = fsspec.open(the_path, "rb")
     with f2 as fh:
         assert fh.read() == b'test\n'
@@ -76,28 +77,28 @@ def test_write_then_read_explicit_auth():
     f2.fs.rm(the_path)
 
 def test_kwargs_from_url():
-    result = irods_fsspec.kwargs_from_url('irods://exao_dap+iplant:secret@data.cyverse.org')
+    result = irods_fsspec.irods_config_from_url('irods://exao_dap+iplant:secret@data.cyverse.org')
     assert result['user'] == 'exao_dap'
     assert result['zone'] == 'iplant'
     assert result['password'] == 'secret'
     assert result['host'] == 'data.cyverse.org'
     assert result['port'] == irods_fsspec.IRODS_PORT
 
-    result = irods_fsspec.kwargs_from_url('irods://exao_dap+iplant:secret@data.cyverse.org')
+    result = irods_fsspec.irods_config_from_url('irods://exao_dap+iplant:secret@data.cyverse.org')
     assert result['user'] == 'exao_dap'
     assert result['zone'] == 'iplant'
     assert result['password'] == 'secret'
     assert result['host'] == 'data.cyverse.org'
     assert result['port'] == irods_fsspec.IRODS_PORT
 
-    result = irods_fsspec.kwargs_from_url('irods://data.cyverse.org')
+    result = irods_fsspec.irods_config_from_url('irods://data.cyverse.org')
     assert result['user'] == None
     assert result['zone'] == None
     assert result['password'] == None
     assert result['host'] == 'data.cyverse.org'
     assert result['port'] == irods_fsspec.IRODS_PORT
 
-    result = irods_fsspec.kwargs_from_url('irods://probably=invalid@data.cyverse.org')
+    result = irods_fsspec.irods_config_from_url('irods://probably=invalid@data.cyverse.org')
     assert result['user'] == 'probably=invalid'
     assert result['zone'] == None
     assert result['password'] == None
@@ -118,7 +119,8 @@ def test_mv():
     irodsfs.mv(the_path, new_path)
     with irodsfs.open(new_path, 'rb') as fh:
         assert fh.read() == b'test\n'
-
+    assert irodsfs.exists(new_path)
+    assert not irodsfs.exists(the_path)
     # clean up
     irodsfs.rm(new_path)
 

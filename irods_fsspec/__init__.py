@@ -10,7 +10,7 @@ IRODS_PORT = 1247
 
 log = logging.getLogger(__name__)
 
-def kwargs_from_url(url):
+def irods_config_from_url(url):
     result = urlparse(url)
     if result.username is not None:
         try:
@@ -31,24 +31,29 @@ def kwargs_from_url(url):
 
 class IRODSFileSystem(AbstractFileSystem):
     root_marker = "/"
-    def __init__(self, *args, user=None, zone=None, password=None, host=None, port=IRODS_PORT, **storage_options):
-        ssl_context = ssl.create_default_context(purpose=ssl.Purpose.SERVER_AUTH, cafile=None, capath=None, cadata=None)
-        if all(x is None for x in (user, password, zone)):
-            try:
-                env_file = os.environ['IRODS_ENVIRONMENT_FILE']
-            except KeyError:
-                env_file = os.path.expanduser('~/.irods/irods_environment.json')
-            log.info(f'Initializing iRODS session from {env_file}')
-            self.session = iRODSSession(irods_env_file=env_file, ssl_context=ssl_context)
+    def __init__(self, *args, session=None, user=None, zone=None, password=None, host=None, port=IRODS_PORT, **storage_options):
+        if session is None:
+            ssl_context = ssl.create_default_context(purpose=ssl.Purpose.SERVER_AUTH, cafile=None, capath=None, cadata=None)
+            if all(x is None for x in (user, password, zone)):
+                try:
+                    env_file = os.environ['IRODS_ENVIRONMENT_FILE']
+                except KeyError:
+                    env_file = os.path.expanduser('~/.irods/irods_environment.json')
+                log.info(f'Initializing iRODS session from {env_file}')
+                self.session = iRODSSession(irods_env_file=env_file, ssl_context=ssl_context)
+            else:
+                log.info(f'Initializing iRODS session from specified ({host=}, {port=}, {user=}, password=****, {zone=})')
+                self.session = iRODSSession(
+                    host=host,
+                    port=port if port is not None else IRODS_PORT,
+                    user=user,
+                    password=password,
+                    zone=zone
+                )
         else:
-            log.info(f'Initializing iRODS session from specified ({host=}, {port=}, {user=}, password=****, {zone=})')
-            self.session = iRODSSession(
-                host=host,
-                port=port if port is not None else IRODS_PORT,
-                user=user,
-                password=password,
-                zone=zone
-            )
+            log.info(f'Reusing session {session}')
+            self.session = session
+        self.user_id = self.session.users.get(self.session.username)
         super().__init__(*args, **storage_options)
 
     def __del__(self):
@@ -56,7 +61,7 @@ class IRODSFileSystem(AbstractFileSystem):
 
     @staticmethod
     def _get_kwargs_from_urls(path):
-        return kwargs_from_url(path)
+        return irods_config_from_url(path)
 
     @classmethod
     def _strip_protocol(cls, path):
@@ -161,6 +166,13 @@ class IRODSFileSystem(AbstractFileSystem):
             'type': 'directory'
         }
 
+    def exists(self, path):
+        path = self._strip_protocol(path)
+        return (
+            self.session.collections.exists(path) or
+            self.session.data_objects.exists(path)
+        ) 
+
     def ls(self, path, detail=True):
         '''List data objects and subcollections at path.
 
@@ -191,16 +203,21 @@ class IRODSFileSystem(AbstractFileSystem):
         #   ... ?
         entries = []
         path = self._strip_protocol(path)
+        print('path', path)
         if self.session.data_objects.exists(path):
+            print('Got data object')
             data_object = self.session.data_objects.get(path)
             entries.append(self._data_object_info(data_object))
         elif self.session.collections.exists(path):
+            print('Got collection')
             collection = self.session.collections.get(path)
             # unify data_objects and subcollections
             for subcoll in collection.subcollections:
                 entries.append(self._collection_info(subcoll))
             for data_object in collection.data_objects:
                 entries.append(self._data_object_info(data_object))
+        else:
+            raise FileNotFoundError(f"No collection or data object readable by {self.session.username} at {path}")
         if detail:
             return entries
         else:
