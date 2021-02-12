@@ -31,7 +31,7 @@ with f2 as fh:
 The user, zone, password, and port can all be included in the URL, bypassing the need for `iinit` / iCommands:
 
 ```python
-f3 = fsspec.open('irods://myuser%23iplant:mypass@data.cyverse.org:1247/iplant/home/myuser/test.txt', 'rb')
+f3 = fsspec.open('irods://myuser+iplant:mypass@data.cyverse.org:1247/iplant/home/myuser/test.txt', 'rb')
 with f3 as fh:
     assert fh.read() == b'test\n'
 ```
@@ -39,10 +39,10 @@ with f3 as fh:
 The format looks like this:
 
 ```
-irods://<username>%23<zone>:<password>@<hostname>[:<port>]/<path to data object>
+irods://<username>+<zone>:<password>@<hostname>[:<port>]/<path to data object>
 ```
 
-Note the percent-encoded `#` (written as `%23`) to separate user name from the zone name. irods_fsspec will use the default port if `:<port>` is omitted, but all other components are required.
+Note the `+` to separate user name from the zone name. irods_fsspec will use the default port if `:<port>` is omitted, but all other components are required.
 
 Filesystem API usage
 --------------------

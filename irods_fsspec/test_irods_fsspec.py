@@ -59,7 +59,7 @@ def test_write_then_read_implicit_auth():
 )
 def test_write_then_read_explicit_auth():
     the_path = (
-        f"irods://{_ENV['irods_user_name']}%23{_ENV['irods_zone_name']}:"
+        f"irods://{_ENV['irods_user_name']}+{_ENV['irods_zone_name']}:"
         f"{_ENV['irods_password']}@"
         f"{_ENV['irods_host']}:"
         f"{_ENV['irods_port']}"
@@ -75,6 +75,34 @@ def test_write_then_read_explicit_auth():
     # clean up
     f2.fs.rm(the_path)
 
+def test_kwargs_from_url():
+    result = irods_fsspec.kwargs_from_url('irods://exao_dap+iplant:secret@data.cyverse.org')
+    assert result['user'] == 'exao_dap'
+    assert result['zone'] == 'iplant'
+    assert result['password'] == 'secret'
+    assert result['host'] == 'data.cyverse.org'
+    assert result['port'] == irods_fsspec.IRODS_PORT
+
+    result = irods_fsspec.kwargs_from_url('irods://exao_dap+iplant:secret@data.cyverse.org')
+    assert result['user'] == 'exao_dap'
+    assert result['zone'] == 'iplant'
+    assert result['password'] == 'secret'
+    assert result['host'] == 'data.cyverse.org'
+    assert result['port'] == irods_fsspec.IRODS_PORT
+
+    result = irods_fsspec.kwargs_from_url('irods://data.cyverse.org')
+    assert result['user'] == None
+    assert result['zone'] == None
+    assert result['password'] == None
+    assert result['host'] == 'data.cyverse.org'
+    assert result['port'] == irods_fsspec.IRODS_PORT
+
+    result = irods_fsspec.kwargs_from_url('irods://probably=invalid@data.cyverse.org')
+    assert result['user'] == 'probably=invalid'
+    assert result['zone'] == None
+    assert result['password'] == None
+    assert result['host'] == 'data.cyverse.org'
+    assert result['port'] == irods_fsspec.IRODS_PORT
 
 @pytest.mark.skipif(
     not _check_connection(),

@@ -12,9 +12,10 @@ log = logging.getLogger(__name__)
 
 def kwargs_from_url(url):
     result = urlparse(url)
+    print(result)
     if result.username is not None:
         try:
-            user, zone = result.username.split('%23')
+            user, zone = result.username.split('+')
         except ValueError:
             user = result.username
             zone = None
