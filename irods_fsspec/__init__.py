@@ -66,7 +66,7 @@ class IRODSFileSystem(AbstractFileSystem):
     @classmethod
     def _strip_protocol(cls, path):
         result = urlparse(path)
-        return os.path.normpath(result.path) if len(path) else self.root_marker
+        return os.path.normpath(result.path) if len(path) else cls.root_marker
 
     def mkdir(self, path, **kwargs):
         path = os.path.normpath(self._strip_protocol(path))
@@ -171,7 +171,7 @@ class IRODSFileSystem(AbstractFileSystem):
         return (
             self.session.collections.exists(path) or
             self.session.data_objects.exists(path)
-        ) 
+        )
 
     def ls(self, path, detail=True):
         '''List data objects and subcollections at path.
@@ -220,6 +220,15 @@ class IRODSFileSystem(AbstractFileSystem):
         else:
             return [x['name'] for x in entries]
 
+    def cp_file(self, path1, path2):
+        '''
+        Copy a single data object (see `copy` for recursive)
+        '''
+        proxy_obj = self._collections_or_data_objects(path1)
+        if proxy_obj is self.session.collections:
+            proxy_obj.create(path2)
+        else:
+            proxy_obj.copy(path1, path2)
 
 def register():
     register_implementation('irods', IRODSFileSystem)
