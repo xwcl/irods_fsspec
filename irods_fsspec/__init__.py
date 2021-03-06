@@ -39,10 +39,10 @@ class IRODSFileSystem(AbstractFileSystem):
                     env_file = os.environ['IRODS_ENVIRONMENT_FILE']
                 except KeyError:
                     env_file = os.path.expanduser('~/.irods/irods_environment.json')
-                log.info(f'Initializing iRODS session from {env_file}')
+                log.debug(f'Initializing iRODS session from {env_file}')
                 self.session = iRODSSession(irods_env_file=env_file, ssl_context=ssl_context)
             else:
-                log.info(f'Initializing iRODS session from specified ({host=}, {port=}, {user=}, password=****, {zone=})')
+                log.debug(f'Initializing iRODS session from specified ({host=}, {port=}, {user=}, password=****, {zone=})')
                 self.session = iRODSSession(
                     host=host,
                     port=port if port is not None else IRODS_PORT,
@@ -51,7 +51,7 @@ class IRODSFileSystem(AbstractFileSystem):
                     zone=zone
                 )
         else:
-            log.info(f'Reusing session {session}')
+            log.debug(f'Reusing session {session}')
             self.session = session
         self.user_id = self.session.users.get(self.session.username)
         super().__init__(*args, **storage_options)
@@ -71,11 +71,11 @@ class IRODSFileSystem(AbstractFileSystem):
     def mkdir(self, path, **kwargs):
         path = os.path.normpath(self._strip_protocol(path))
         if not self.session.collections.exists(path):
-            log.info(f'Creating iRODS collection {path}')
+            log.debug(f'Creating iRODS collection {path}')
             self.session.collections.create(path)
             self.invalidate_cache(self._parent(path))
         else:
-            log.info(f'iRODS collection {path} exists')
+            log.debug(f'iRODS collection {path} exists')
         return path
 
     def rmdir(self, path, recurse=False):
@@ -106,6 +106,7 @@ class IRODSFileSystem(AbstractFileSystem):
         self.invalidate_cache(self._parent(path2))
 
     def _rm(self, path):
+        path = self._strip_protocol(path)
         proxy_obj = self._collections_or_data_objects(path)
         if proxy_obj is self.session.collections:
             proxy_obj.remove(path)
@@ -118,7 +119,7 @@ class IRODSFileSystem(AbstractFileSystem):
         if not autocommit:
             raise NotImplementedError("Only autocommit=True operations supported")
         if 'w' in mode and not self.session.data_objects.exists(path):
-            log.info(f'Creating {path=}')
+            log.debug(f'Creating {path=}')
             data_obj = self.session.data_objects.create(path)
             self.invalidate_cache(self._parent(path))
         else:
@@ -224,6 +225,8 @@ class IRODSFileSystem(AbstractFileSystem):
         '''
         Copy a single data object (see `copy` for recursive)
         '''
+        path1 = self._strip_protocol(path1)
+        path2 = self._strip_protocol(path2)
         proxy_obj = self._collections_or_data_objects(path1)
         if proxy_obj is self.session.collections:
             proxy_obj.create(path2)
