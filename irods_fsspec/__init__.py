@@ -78,6 +78,31 @@ class IRODSFileSystem(AbstractFileSystem):
             log.debug(f'iRODS collection {path} exists')
         return path
 
+    def makedirs(self, path, exist_ok=False):
+        """Recursively make directories
+
+        Creates directory at path and any intervening required directories.
+        Raises exception if, for instance, the path already exists but is a
+        file.
+
+        Parameters
+        ----------
+        path: str
+            leaf directory name
+        exist_ok: bool (False)
+            If False, will error if the target already exists
+        """
+        path = os.path.normpath(self._strip_protocol(path))
+        if self.session.data_objects.exists(path):
+            raise FileExistsError(f"An iRODS data object exists at path {path}, cannot make a collection there")
+        coll_exists = self.session.collections.exists(path)
+        if not coll_exists:
+            self.mkdir(path)
+        elif not exist_ok:
+            raise FileExistsError(f"An iRODS collection already exists at path {path}")
+        return path
+
+
     def rmdir(self, path, recurse=False):
         path = os.path.normpath(self._strip_protocol(path))
         self.session.collections.remove(path, recurse=recurse)
@@ -174,7 +199,7 @@ class IRODSFileSystem(AbstractFileSystem):
             self.session.data_objects.exists(path)
         )
 
-    def ls(self, path, detail=True):
+    def ls(self, path, detail=False):
         '''List data objects and subcollections at path.
 
         When `detail=True`, `entries` is a list of dicts containing
