@@ -35,3 +35,11 @@ setup(
         'Bug Reports': f'https://github.com/magao-x/{PROJECT}/issues',
     },
 )
+
+setuptools.setup(
+        entry_points={
+                'fsspec.specs': [
+                        'irods=irods_fsspec.IRODSFileSystem',
+                    ],
+            }
+)
