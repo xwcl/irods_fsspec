@@ -260,7 +260,7 @@ class IRODSFileSystem(AbstractFileSystem):
 
     def cat_file(self, path, start=None, end=None, **kwargs):
         data_obj_size = self.session.data_objects.get(path).size
-        print(f"irods-fsspec : cat file {path} of size {data_obj_size}")
+        log.debug(f"irods-fsspec : cat file {path} of size {data_obj_size}")
 
         with self.open(path, "rb", block_size=0, **kwargs) as f:
             return f.read(data_obj_size)
