@@ -29,3 +29,11 @@ setup(
         'Bug Reports': f'https://github.com/xwcl/{PROJECT}/issues',
     },
 )
+
+setuptools.setup(
+        entry_points={
+                'fsspec.specs': [
+                        'irods=irods_fsspec.IRODSFileSystem',
+                    ],
+            }
+)

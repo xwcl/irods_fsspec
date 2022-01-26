@@ -258,5 +258,12 @@ class IRODSFileSystem(AbstractFileSystem):
         else:
             proxy_obj.copy(path1, path2)
 
+    def cat_file(self, path, start=None, end=None, **kwargs):
+        data_obj_size = self.session.data_objects.get(path).size
+        log.debug(f"irods-fsspec : cat file {path} of size {data_obj_size}")
+
+        with self.open(path, "rb", block_size=0, **kwargs) as f:
+            return f.read(data_obj_size)
+
 def register():
     register_implementation('irods', IRODSFileSystem)
